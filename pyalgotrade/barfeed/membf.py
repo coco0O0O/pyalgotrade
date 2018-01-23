@@ -61,22 +61,22 @@ class BarFeed(barfeed.BaseBarFeed):
 
     def addBarsFromSequence(self, instrument, bars):
         if self.__started:
-            raise Exception("Can't add more bars once you started consuming bars")
+            raise Exception(
+                "Can't add more bars once you started consuming bars")
 
         self.__bars.setdefault(instrument, [])
         self.__nextPos.setdefault(instrument, 0)
 
         # Add and sort the bars
         self.__bars[instrument].extend(bars)
-        barCmp = lambda x, y: cmp(x.getDateTime(), y.getDateTime())
-        self.__bars[instrument].sort(barCmp)
+        self.__bars[instrument].sort(key=lambda x: x.getDateTime())
 
         self.registerInstrument(instrument)
 
     def eof(self):
         ret = True
         # Check if there is at least one more bar to return.
-        for instrument, bars in self.__bars.iteritems():
+        for instrument, bars in self.__bars.items():
             nextPos = self.__nextPos[instrument]
             if nextPos < len(bars):
                 ret = False
@@ -86,29 +86,34 @@ class BarFeed(barfeed.BaseBarFeed):
     def peekDateTime(self):
         ret = None
 
-        for instrument, bars in self.__bars.iteritems():
+        for instrument, bars in self.__bars.items():
             nextPos = self.__nextPos[instrument]
             if nextPos < len(bars):
                 ret = utils.safe_min(ret, bars[nextPos].getDateTime())
         return ret
 
     def getNextBars(self):
-        # All bars must have the same datetime. We will return all the ones with the smallest datetime.
+        # All bars must have the same datetime. We will return all the ones
+        # with the smallest datetime.
         smallestDateTime = self.peekDateTime()
 
         if smallestDateTime is None:
             return None
 
-        # Make a second pass to get all the bars that had the smallest datetime.
+        # Make a second pass to get all the bars that had the smallest
+        # datetime.
         ret = {}
-        for instrument, bars in self.__bars.iteritems():
+        for instrument, bars in self.__bars.items():
             nextPos = self.__nextPos[instrument]
-            if nextPos < len(bars) and bars[nextPos].getDateTime() == smallestDateTime:
+            if nextPos < len(
+                    bars) and bars[nextPos].getDateTime() == smallestDateTime:
                 ret[instrument] = bars[nextPos]
                 self.__nextPos[instrument] += 1
 
         if self.__currDateTime == smallestDateTime:
-            raise Exception("Duplicate bars found for %s on %s" % (ret.keys(), smallestDateTime))
+            raise Exception(
+                "Duplicate bars found for %s on %s" %
+                (ret.keys(), smallestDateTime))
 
         self.__currDateTime = smallestDateTime
         return bar.Bars(ret)
